@@ -43,11 +43,11 @@ def welcome():
     """List all available api routes."""
     return (
         f"Available Routes:<br/>"
-        f"/api/v1.0/precipitation<br/>"
-        f"/api/v1.0/stations<br/>"
-        f"/api/v1.0/tobs<br/>"
-        f"/api/v1.0/start_date<br/>"
-        f"/api/v1.0/start_date_and_end_date"    
+        f"Precipitation: /api/v1.0/precipitation<br/>"
+        f"List of stations /api/v1.0/stations<br/>"
+        f"List of temperature: /api/v1.0/tobs<br/>"
+        f"Data from start date 'yyyy-mm-dd': /api/v1.0/yyyy-mm-dd<start><br/>"
+        f"Data between start and end date in 'yyyy-mm-dd': /api/v1.0/yyyy-mm-dd<start>/yyyy-mm-dd<end>"    
     )
 
 @app.route("/api/v1.0/precipitation")
@@ -113,19 +113,55 @@ def temp():
     
     return jsonify(date_temp)
 
-"""
-@app.route("/api/v1.0/start_date")
-def start_date():
-
+@app.route("/api/v1.0/<start>")
+def start_date(start):
+    
     # Create our session (link) from Python to the DB
     session = Session(engine)
 
+    sel = [func.min(Measurement.tobs), 
+       func.avg(Measurement.tobs),
+       func.max(Measurement.tobs)]
 
-
-@app.route("/api/v1.0/start_date_and_end_date")
-def ():    
-"""
+    results = session.query(*sel).filter(Measurement.date >= start).all()
     
+    session.close()
+    
+    date_temp_summary = []
+    
+    for min_temp, avg_temp, max_temp in results:
+        summary_date_temp_dict = {}
+        summary_date_temp_dict["Min Temp"] = min_temp
+        summary_date_temp_dict["Avg Temp"] = avg_temp
+        summary_date_temp_dict["Max Temp"] = max_temp
+        date_temp_summary.append(summary_date_temp_dict)
+        
+    return jsonify(date_temp_summary)
 
+@app.route("/api/v1.0/<start_date>/<end_date>")
+def start_and_end_date(start_date, end_date):    
+    
+    # Create our session (link) from Python to the DB
+    session = Session(engine)
+
+    sel = [func.min(Measurement.tobs), 
+       func.avg(Measurement.tobs),
+       func.max(Measurement.tobs)]
+
+    results = session.query(*sel).filter(Measurement.date >= start_date).filter(Measurement.date <= end_date).all()
+    
+    session.close()
+    
+    date_temp_summary = []
+    
+    for min_temp, avg_temp, max_temp in results:
+        summary_date_temp_dict = {}
+        summary_date_temp_dict["Min Temp"] = min_temp
+        summary_date_temp_dict["Avg Temp"] = avg_temp
+        summary_date_temp_dict["Max Temp"] = max_temp
+        date_temp_summary.append(summary_date_temp_dict)
+        
+    return jsonify(date_temp_summary)
+    
 if __name__ == '__main__':
     app.run(debug=True)
